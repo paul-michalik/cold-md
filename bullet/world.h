@@ -35,7 +35,6 @@ namespace cold {
                 return this;
             }
 
-        public:
             world()
             {
                 m_col_broadphase =
@@ -61,6 +60,8 @@ namespace cold {
                     }
                 }
             }
+
+            ~world() = default;
         };
     }
 }
