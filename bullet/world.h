@@ -9,59 +9,54 @@
 namespace cold {
     namespace bullet {
         class world : public ::cold::contract::world {
-        protected:
-            std::unique_ptr<btDbvtBroadphase> m_col_broadphase;
-            std::unique_ptr<btDefaultCollisionConfiguration> m_col_configuration;
-            std::unique_ptr<btCollisionDispatcher> m_col_dispatcher;
-            std::unique_ptr<btCollisionWorld> m_col_world;
+            class world_impl {
+            public:
+                std::unique_ptr<btDbvtBroadphase> m_col_broadphase;
+                std::unique_ptr<btDefaultCollisionConfiguration> m_col_configuration;
+                std::unique_ptr<btCollisionDispatcher> m_col_dispatcher;
+                std::unique_ptr<btCollisionWorld> m_col_world;
+            public:
+                world_impl();
+                ~world_impl();
+            };
+
+            world_impl _world;
+
+            class handle : public ::cold::contract::handle {
+                world* _bullet_world;
+                std::unique_ptr<btCollisionObject> _obj;
+                std::unique_ptr<btGImpactMeshShape> _shape;
+
+                // Inherited via handle
+                virtual void dispose() override;
+                virtual void set_location(
+                    double yaw_, double pitch_, double roll_, 
+                    double x_, double y_, double z_) override;
+                virtual void deactivate() override;
+                virtual void activate() override;
+                virtual bool is_active() const override;
+            public:
+                handle(
+                    world* bullet_world_,
+                    int triangle_count_, double* triangles_, int tri_stride_,
+                    int indices_count, int* indices_, int ind_stride_);
+                ~handle();
+            };
         protected:
             btCollisionWorld* get_world()
             {
-                return m_col_world.get();
-            }
-
-            world* add_object(btTriangleIndexVertexArray const& p_triangles)
-            {
-                
-            }
-
-            virtual void dispose() override
-            {
-                delete this;
+                return _world.m_col_world.get();
             }
         public:
-            virtual ::cold::contract::world* add_object() override
-            {
-                return this;
-            }
 
-            world()
-            {
-                m_col_broadphase =
-                    std::make_unique<btDbvtBroadphase>();
+            world();
+            ~world();
 
-                {
-                    m_col_configuration =
-                        std::make_unique<btDefaultCollisionConfiguration>();
-
-                    {
-                        m_col_dispatcher =
-                            std::make_unique<btCollisionDispatcher>(m_col_configuration.get());
-
-                        btGImpactCollisionAlgorithm::registerAlgorithm(m_col_dispatcher.get());
-
-                        {
-                            m_col_world =
-                                std::make_unique<btCollisionWorld>(
-                                m_col_dispatcher.get(),
-                                m_col_broadphase.get(),
-                                m_col_configuration.get());
-                        }
-                    }
-                }
-            }
-
-            ~world() = default;
+            // Inherited via world
+            virtual void dispose() override;
+            virtual ::cold::contract::handle * add_mesh(
+                int triangle_count_, double * triangles_, int tri_stride_, 
+                int indices_count, int * indices_, int ind_stride_) override;
         };
     }
 }
