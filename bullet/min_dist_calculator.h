@@ -24,15 +24,129 @@ namespace cold {
         class min_dist_calculator {
             btCollisionWorld* _world;
 
-            void gimpact_mesh_vs_gimpact_mesh(
+            bool pass_lower_upper_bound_test(
+                const btGImpactQuantizedBvh * boxes_a_,
+                const btGImpactQuantizedBvh * boxes_b_,
+                int box_idx_a,
+                int box_idx_b,
+                const BT_BOX_BOX_TRANSFORM_CACHE & trans_cache_b_to_a_,
+                min_dist_output& global_res_)
+            {
+                // optimization...!
+                return true;
+            }
+
+            void gimpact_boxset_vs_gimpact_boxset_rec(
+                const btGImpactQuantizedBvh * boxes_a_, 
+                const btGImpactQuantizedBvh * boxes_b_,
+                int box_idx_a_,
+                int box_idx_b_,
+                const BT_BOX_BOX_TRANSFORM_CACHE & trans_cache_b_to_a_,
+                min_dist_output& global_res_)
+            {
+                // prototype: _find_quantized_collision_pairs_recursive...
+
+                // internal node pruning:
+                if (!pass_lower_upper_bound_test(
+                    boxes_a_, boxes_b_, 
+                    box_idx_a_, box_idx_b_, 
+                    trans_cache_b_to_a_, global_res_)) {
+                    return;
+                }
+
+                if (boxes_a_->isLeafNode(box_idx_a_)) {
+                    if (boxes_b_->isLeafNode(box_idx_b_)) {
+                        // calculate min dist triangle/triangle and store in global_res_!
+                       
+                        return;
+                    } else {
+
+                        // descend left recursive:
+                        gimpact_boxset_vs_gimpact_boxset_rec(
+                            boxes_a_, boxes_b_,
+                            box_idx_a_, boxes_b_->getLeftNode(box_idx_b_), 
+                            trans_cache_b_to_a_,
+                            global_res_);
+
+                        // descend right recursive
+                        gimpact_boxset_vs_gimpact_boxset_rec(
+                            boxes_a_, boxes_b_,
+                            box_idx_a_, boxes_b_->getRightNode(box_idx_b_), 
+                            trans_cache_b_to_a_, 
+                            global_res_);
+                    }
+                } else {
+                    if (boxes_b_->isLeafNode(box_idx_b_)) {
+
+                        // descend left recursive:
+                        gimpact_boxset_vs_gimpact_boxset_rec(
+                            boxes_a_, boxes_b_,
+                            boxes_a_->getLeftNode(box_idx_a_), box_idx_b_, 
+                            trans_cache_b_to_a_, global_res_);
+
+                        // descend right recursive:
+
+                        gimpact_boxset_vs_gimpact_boxset_rec(
+                            boxes_a_, boxes_b_,
+                            boxes_a_->getRightNode(box_idx_a_), box_idx_b_, 
+                            trans_cache_b_to_a_, global_res_);
+                    } else {
+                        // descend left0 left1
+                        gimpact_boxset_vs_gimpact_boxset_rec(
+                            boxes_a_, boxes_b_,
+                            boxes_a_->getLeftNode(box_idx_a_), boxes_b_->getLeftNode(box_idx_b_), 
+                            trans_cache_b_to_a_, global_res_);
+
+                        // descend left0 right1
+                        gimpact_boxset_vs_gimpact_boxset_rec(
+                            boxes_a_, boxes_b_,
+                            boxes_a_->getLeftNode(box_idx_a_), boxes_b_->getRightNode(box_idx_b_),
+                            trans_cache_b_to_a_, global_res_);
+
+                        // descend right0 left1
+                        gimpact_boxset_vs_gimpact_boxset_rec(
+                            boxes_a_, boxes_b_,
+                            boxes_a_->getRightNode(box_idx_a_), boxes_b_->getLeftNode(box_idx_b_), 
+                            trans_cache_b_to_a_, global_res_);
+
+                        // descend right0 right1
+                        gimpact_boxset_vs_gimpact_boxset_rec(
+                            boxes_a_, boxes_b_,
+                            boxes_a_->getRightNode(box_idx_a_), boxes_b_->getRightNode(box_idx_b_),
+                            trans_cache_b_to_a_, global_res_);
+
+                    }// else if box_idx_b_ is not a leaf
+                }// else if box_idx_a_ is not a leaf
+            }
+
+            void gimpact_mesh_part_vs_gimpact_mesh_part(
                 const btTransform & trans_a_,
                 const btTransform & trans_b,
-                const btGImpactMeshShapePart* shape_a,
-                const btGImpactMeshShapePart* shape_b,
+                const btGImpactMeshShapePart* shape_part_a,
+                const btGImpactMeshShapePart* shape_part_b,
                 min_dist_output& global_res_)
             {
                 // almost there!
-                // gimpact_vs_gimpact_find_pairs...
+                // prototype: gimpact_vs_gimpact_find_pairs...
+                if (shape_part_a->hasBoxSet() && shape_part_b->hasBoxSet()) {
+                    // prototype: btGImpactQuantizedBvh::find_collision
+                    auto box_set_a = shape_part_a->getBoxSet();
+                    auto box_set_b = shape_part_b->getBoxSet();
+
+                    if (box_set_a->getNodeCount() > 0 && box_set_b->getNodeCount() > 0) {
+                        BT_BOX_BOX_TRANSFORM_CACHE trans_cache_b_to_a;
+                        trans_cache_b_to_a.calc_from_homogenic(trans_a_, trans_b);
+
+                        gimpact_boxset_vs_gimpact_boxset_rec(
+                            box_set_a, box_set_b,
+                            0, 0,
+                            trans_cache_b_to_a,
+                            global_res_);
+                    }
+
+                } else { // what...?
+                    assert(false);
+                }
             }
 
             void gimpact_vs_gimpact(
@@ -70,7 +184,6 @@ namespace cold {
                             shape_a_, 
                             meshshape_b->getMeshPart(mpcount_b),
                             global_res_);
-
                     }
 
                     return;
@@ -84,7 +197,7 @@ namespace cold {
                     const btGImpactMeshShapePart * shapepart_b =
                         static_cast<const btGImpactMeshShapePart *>(shape_b_);
 
-                    gimpact_mesh_vs_gimpact_mesh(
+                    gimpact_mesh_part_vs_gimpact_mesh_part(
                         obj_wrap_a_->getWorldTransform(),
                         obj_wrap_b_->getWorldTransform(),
                         shapepart_a,
@@ -116,7 +229,7 @@ namespace cold {
             {
             }
 
-            min_dist_output find_collision(
+            min_dist_output from_collision(
                 btCollisionObject* obj_a_,
                 btCollisionObject* obj_b_)
             {
@@ -124,7 +237,7 @@ namespace cold {
                 min_dist_output res;
                 // construct result from manifolds, if any...
                 // doesn't make sense to calculate euclidian distance,
-                // we know it equals zero...
+                // when we know it equals zero...
 
                 return res;
             }
@@ -133,7 +246,7 @@ namespace cold {
                 btCollisionObject* obj_a_,
                 btCollisionObject* obj_b_)
             {
-                min_dist_output res = find_collision(obj_a_, obj_b_);
+                min_dist_output res = from_collision(obj_a_, obj_b_);
 
                 // only continue if there is no collision:
                 if (res.dist > 0.) {
@@ -154,7 +267,8 @@ namespace cold {
                     };
 
                      
-                    // equivalent to "discrete collision detection query" in e.g. btCollisionWorld::contactPairTest
+                    // equivalent to "discrete collision detection query" in 
+                    // e.g. btCollisionWorld::contactPairTest
                     return calculate(&obj_a, &obj_b);
                 }
                 return res;

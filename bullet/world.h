@@ -42,15 +42,17 @@ namespace cold {
                     int indices_count, int* indices_, int ind_stride_);
                 ~handle();
             };
-        protected:
+
+        public:
+            world();
+            ~world();
+
             btCollisionWorld* get_world()
             {
                 return _world.m_col_world.get();
             }
-        public:
 
-            world();
-            ~world();
+
 
             // Inherited via world
             virtual void dispose() override;
