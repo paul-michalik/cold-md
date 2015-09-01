@@ -32,7 +32,7 @@ namespace cold {
                 const BT_BOX_BOX_TRANSFORM_CACHE & trans_cache_b_to_a_,
                 min_dist_output& global_res_)
             {
-                // optimization...!
+                // TODO: Implement optimization, gjk box/box?
                 return true;
             }
 
@@ -56,7 +56,7 @@ namespace cold {
 
                 if (boxes_a_->isLeafNode(box_idx_a_)) {
                     if (boxes_b_->isLeafNode(box_idx_b_)) {
-                        // calculate min dist triangle/triangle and store in global_res_!
+                        // TODO: calculate min dist triangle/triangle gjk and store in global_res_!
                        
                         return;
                     } else {
