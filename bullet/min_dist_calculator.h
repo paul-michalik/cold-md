@@ -117,9 +117,18 @@ namespace NSBulletPhysicsExt {
         // Initialized to respective max, min values of current floating point models
         // so that it can be used as a initial value for pruning operations.
         std::pair<btScalar, btScalar> cur_dist_interval = {
-           -std::numeric_limits<btScalar>::max(),
+           +std::numeric_limits<btScalar>::max(),
            +std::numeric_limits<btScalar>::max()
         };
+
+        inline bool is_lb_interval_initialized() const
+        {
+            return 
+                cur_dist_interval.first !=
+                +std::numeric_limits<btScalar>::max() &&
+                cur_dist_interval.second !=
+                +std::numeric_limits<btScalar>::max();
+        }
 
         inline friend std::ostream& operator << (std::ostream& out_, min_dist_output const& md_res_)
         {
@@ -302,7 +311,7 @@ namespace NSBulletPhysicsExt {
             btTriangleShape const& tri_a_,
             btTriangleShape const& tri_b_)
         {
-            btTransform null_transf{
+            static const btTransform null_transf{
                 btQuaternion(0, 0, 0), btVector3(0, 0, 0)
             };
 
@@ -314,15 +323,15 @@ namespace NSBulletPhysicsExt {
 
             min_dist_output cur_result;
 
-            cur_result.point_on_a =
-                pc_output.m_pointInWorld;
             cur_result.point_on_b =
+                pc_output.m_pointInWorld;
+            cur_result.point_on_a =
                 pc_output.m_pointInWorld + pc_output.m_normalOnBInWorld * pc_output.m_distance;
             cur_result.distance = pc_output.m_distance;
 
             // lower/upper bound:
             cur_result.cur_dist_interval.first = 
-                cur_result.cur_dist_interval.first = cur_result.distance;
+                cur_result.cur_dist_interval.second = cur_result.distance;
 
             return cur_result;
         }
@@ -405,9 +414,11 @@ namespace NSBulletPhysicsExt {
                         triangles_.get_triangle(boxes_a_, box_idx_a_),
                         triangles_.get_triangle(boxes_b_, box_idx_b_));
 
-                    // update distance and bounds!
-                    if (global_res_.distance < cur_result.distance) {
+                    // update distance, points and bounds!
+                    if (cur_result.distance < global_res_.distance) {
                         global_res_.distance = cur_result.distance;
+                        global_res_.point_on_a = cur_result.point_on_a;
+                        global_res_.point_on_b = cur_result.point_on_b;
                     }
                     
                     global_res_.cur_dist_interval.first = std::min(
@@ -417,6 +428,7 @@ namespace NSBulletPhysicsExt {
                     global_res_.cur_dist_interval.second = std::min(
                         global_res_.cur_dist_interval.second,
                         cur_result.distance);
+
                 } else {
 
                     // descend left recursive:
@@ -700,6 +712,10 @@ namespace NSBulletPhysicsExt {
             btCollisionObject* obj_b_)
         {
             min_dist_output result;
+
+            result.obj_a = obj_a_;
+            result.obj_b = obj_b_;
+
             if (!try_calculate_from_collision_data(obj_a_, obj_b_, result)) {
                 btCollisionObjectWrapper obj_a = {
                    nullptr,
