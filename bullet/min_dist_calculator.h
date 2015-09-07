@@ -144,12 +144,12 @@ namespace NSBulletPhysicsExt {
 
     using min_dist_output_matrix = std::vector<min_dist_output>;
 
-    using triangle_set_t = std::hash_map<int, btTriangleShapeEx>; 
-
     // Bullet requires to lock the triangle containers before retrieving triangle data.
     // Therefore, it is very expensive to do when triangles pairs are actually needed and we
     // must collect all triangles in a repository before the actual operation starts...
     class triangle_repository {
+        using triangle_set_t = std::hash_map<int, btTriangleShapeEx>;
+
         btGImpactBoxSet const* _part_boxes_a;
         btGImpactBoxSet const* _part_boxes_b;
         triangle_set_t _triangles_a;
@@ -677,20 +677,20 @@ namespace NSBulletPhysicsExt {
                             // here is that the distance should be zero... The positions
                             // of the contact points are useless...
 
+                            if (contact_pt.m_distance1 <= 0.) {
+                                // I am only interested in euclidian distance...
+                                auto dist = std::min(0., contact_pt.m_distance1);
 
-                            // I am only interested in euclidian distance...
-                            auto dist = contact_pt.getPositionWorldOnA()
-                                .distance(contact_pt.getPositionWorldOnB());
+                                if (dist < result_.distance) {
+                                    result_.distance = dist;
+                                    result_.obj_a = const_cast<btCollisionObject*>(obj_a);
+                                    result_.obj_b = const_cast<btCollisionObject*>(obj_b);
+                                    // these values are mostly totally screwed...
+                                    result_.point_on_a = contact_pt.getPositionWorldOnA();
+                                    result_.point_on_b = contact_pt.getPositionWorldOnB();
 
-                            if (dist < result_.distance) {
-                                minkowski_dist = std::fabs(contact_pt.m_distance1);
-                                result_.distance = dist;
-                                result_.obj_a = const_cast<btCollisionObject*>(obj_a);
-                                result_.obj_b = const_cast<btCollisionObject*>(obj_b);
-                                result_.point_on_a = contact_pt.getPositionWorldOnA();
-                                result_.point_on_b = contact_pt.getPositionWorldOnB();
-
-                                contact_found = true;
+                                    contact_found = true;
+                                }
                             }
                         }
                     }
