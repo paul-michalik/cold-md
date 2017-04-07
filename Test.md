@@ -1,4 +1,4 @@
-## Software Development Kit for Macs = Multi Agent Cloud Slam
+# Software Development Kit for Macs = Multi Agent Cloud Slam
 
 This is the official repository for Multi Agent Cloud Slam SDK.
 
